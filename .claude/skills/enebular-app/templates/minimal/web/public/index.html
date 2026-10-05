@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>__APP_TITLE__</title>
+    <!--
+      ★ ?v=__ASSET_VERSION__ を外さないこと。
+      実行環境の前段キャッシュが .css / .js を max-age=14400 に上書きするため、
+      no-cache は効かない。URL を変えるしかない（pitfalls 1）。
+      __ASSET_VERSION__ は配信時にコミットハッシュへ置換される。
+      相対パスで書くこと（先頭 / を付けるとトリガーのパスの外に出る）。
+    -->
+    <link rel="stylesheet" href="styles.css?v=__ASSET_VERSION__" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <h1>__APP_TITLE__</h1>
+        <p class="owner">あなた: <span id="owner"></span></p>
+      </header>
+
+      <p id="error" class="error" hidden></p>
+
+      <form id="form" class="form">
+        <input id="text" type="text" maxlength="500" placeholder="メモを入力" autocomplete="off" />
+        <button type="submit">追加</button>
+      </form>
+
+      <ul id="list" class="list"></ul>
+    </main>
+
+    <script src="app.js?v=__ASSET_VERSION__"></script>
+  </body>
+</html>

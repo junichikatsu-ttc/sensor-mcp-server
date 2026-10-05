@@ -1,0 +1,277 @@
+[
+  {
+    "id": "ae507bebc3e6a9a4",
+    "type": "tab",
+    "label": "フロー 1",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "f306fd1fb6ba965f",
+    "type": "junction",
+    "z": "ae507bebc3e6a9a4",
+    "x": 1120,
+    "y": 280,
+    "wires": [
+      [
+        "37060827a5d5cc35"
+      ]
+    ]
+  },
+  {
+    "id": "649846f26673e2fd",
+    "type": "datastore-config",
+    "name": "datastore-config",
+    "tableIdType": "str",
+    "tableIdConstValue": ""
+  },
+  {
+    "id": "769e5d2c3ccd065b",
+    "type": "http in",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "url": "/ttc-iot-sensor",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 140,
+    "wires": [
+      [
+        "07bc34b060eb4778"
+      ]
+    ]
+  },
+  {
+    "id": "cbd43bd45406df65",
+    "type": "LCDP-in",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "x": 110,
+    "y": 260,
+    "wires": [
+      [
+        "406ee64b95cbec34"
+      ]
+    ]
+  },
+  {
+    "id": "07bc34b060eb4778",
+    "type": "change",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "item",
+        "pt": "msg",
+        "to": "payload",
+        "tot": "msg"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 410,
+    "y": 180,
+    "wires": [
+      [
+        "7a0ed8fcb1299986"
+      ]
+    ]
+  },
+  {
+    "id": "7a0ed8fcb1299986",
+    "type": "ds-put-item",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "inParams_tableIdType": "msg",
+    "inParams_puttingItem": "item",
+    "inParams_puttingItemType": "msg",
+    "inParams_puttingItemConstValue": "item",
+    "outParams1_destOfputItemType": "msg",
+    "outParams1_destOfputItemConstValue": "payload",
+    "datastoreConfig": "649846f26673e2fd",
+    "x": 600,
+    "y": 180,
+    "wires": [
+      [
+        "7caf426ad8ba1e01"
+      ]
+    ]
+  },
+  {
+    "id": "7caf426ad8ba1e01",
+    "type": "change",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "statusCode",
+        "pt": "msg",
+        "to": "200",
+        "tot": "num"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 820,
+    "y": 180,
+    "wires": [
+      [
+        "d613df6ad1466375"
+      ]
+    ]
+  },
+  {
+    "id": "2b0bc7afbd988690",
+    "type": "change",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "statusCode",
+        "pt": "msg",
+        "to": "500",
+        "tot": "num"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 820,
+    "y": 220,
+    "wires": [
+      [
+        "d613df6ad1466375"
+      ]
+    ]
+  },
+  {
+    "id": "4d9d6f45b6ee33a1",
+    "type": "catch",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "scope": [
+      "7a0ed8fcb1299986"
+    ],
+    "uncaught": false,
+    "x": 630,
+    "y": 220,
+    "wires": [
+      [
+        "2b0bc7afbd988690"
+      ]
+    ]
+  },
+  {
+    "id": "22789250102e8cd3",
+    "type": "http response",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 1230,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "37060827a5d5cc35",
+    "type": "LCDP-out",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "x": 1230,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "d613df6ad1466375",
+    "type": "change",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "headers",
+        "pt": "msg",
+        "to": "{\"Content-Type\":\"application/json\",\"Access-Control-Allow-Origin\":\"*\",\"Vary\":\"Origin\",\"Access-Control-Allow-Methods\":\"POST,OPTIONS\",\"Access-Control-Allow-Headers\":\"Content-Type\"}",
+        "tot": "json"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 1050,
+    "y": 200,
+    "wires": [
+      [
+        "22789250102e8cd3",
+        "37060827a5d5cc35"
+      ]
+    ]
+  },
+  {
+    "id": "406ee64b95cbec34",
+    "type": "switch",
+    "z": "ae507bebc3e6a9a4",
+    "name": "",
+    "property": "req.method",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "eq",
+        "v": "POST",
+        "vt": "str"
+      },
+      {
+        "t": "eq",
+        "v": "OPTIONS",
+        "vt": "str"
+      }
+    ],
+    "checkall": "true",
+    "repair": false,
+    "outputs": 2,
+    "x": 230,
+    "y": 260,
+    "wires": [
+      [
+        "07bc34b060eb4778"
+      ],
+      [
+        "08076836aa5f0b3c"
+      ]
+    ]
+  },
+  {
+    "id": "08076836aa5f0b3c",
+    "type": "function",
+    "z": "ae507bebc3e6a9a4",
+    "name": "プリフライト応答",
+    "func": "msg.statusCode = 204;\nmsg.payload = \"\";\nmsg.headers = {\n  \"Access-Control-Allow-Origin\": \"*\",\n  \"Vary\": \"Origin\",\n  \"Access-Control-Allow-Methods\": \"GET,OPTIONS\",\n  \"Access-Control-Allow-Headers\": \"Content-Type\",\n  \"Access-Control-Max-Age\": \"86400\"\n};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 280,
+    "wires": [
+      [
+        "f306fd1fb6ba965f"
+      ]
+    ]
+  }
+]

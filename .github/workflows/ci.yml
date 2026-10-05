@@ -1,0 +1,45 @@
+# CI: typecheck → test → ZIP ビルド（handler を require で検証）。enebular は呼ばない。
+# ZIP は成果物として 7 日間残す（デプロイ前に中身を確認したいときに使う）。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      # web → 関数 → ZIP。build.mjs が index.js を require して handler が関数か検証する
+      - run: npm run build
+        env:
+          BUILD_COMMIT: ${{ github.sha }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sensor-mcp-server-function-${{ github.sha }}
+          path: sensor-mcp-server-function.zip
+          retention-days: 7
+          if-no-files-found: error

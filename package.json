@@ -1,0 +1,39 @@
+{
+  "name": "sensor-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sensor MCP Server — enebular クラウド実行環境（ZIP / Node.js 22.x）",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/local.ts",
+    "dev:web": "node web/build.mjs --watch",
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "enebular:check": "node deploy.mjs check",
+    "enebular:init": "node deploy.mjs init",
+    "enebular:config": "node deploy.mjs config",
+    "enebular:deploy": "node deploy.mjs deploy",
+    "enebular:smoke": "node deploy.mjs smoke"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "@uhuru/enebular-sdk": "1.0.1",
+    "hono": "4.13.7",
+    "zod": "4.6.2"
+  },
+  "devDependencies": {
+    "@hono/node-server": "2.1.1",
+    "@types/aws-lambda": "8.10.163",
+    "@types/node": "22.20.2",
+    "@uhuru/enebular-cli": "1.0.0",
+    "archiver": "7.0.1",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  }
+}
