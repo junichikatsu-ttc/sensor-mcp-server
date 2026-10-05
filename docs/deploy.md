@@ -51,7 +51,7 @@ npm run enebular:smoke              # デプロイ済み環境の確認
 ## 3. デプロイ後の確認
 
 ```bash
-# 稼働と設定
+# 稼働と設定（トリガーのルートは末尾スラッシュ付き https://xxxx.enebular.com/sensor-mcp-server/ で開く。無しだと enebular 側が 404 を返す）
 curl -s https://xxxx.enebular.com/sensor-mcp-server/v1/health | jq .
 #   commit がビルドと一致 / configOk: true / datastore: "cloud" / mockMode: false
 
@@ -81,7 +81,8 @@ curl -s -X POST https://xxxx.enebular.com/sensor-mcp-server/mcp \
 | 症状 | 見るところ |
 | :--- | :--- |
 | デプロイしたのに画面が変わらない | `/v1/health` の `commit`。一致していれば前段キャッシュ。`index.html` の `?v=` が付いているか |
-| 関数は動いているのに全部 404 | 404 レスポンスの `error.path`。`app.ts` の 3 通りマウントが崩れていないか |
+| スモークテストが 404 のまま終わる（HTML の「ページが見つかりませんでした」） | enebular 側の 404。実行環境の HTTP トリガーのパスが `ENEBULAR_HTTP_TRIGGER_URL` のパスと一致していない。`enebular:config`（`apply_config`）が別のパスを送っていないか |
+| 関数は動いているのに全部 404（JSON の `error.path` が返る） | こちらの 404。`app.ts` の 3 通りマウントが崩れていないか |
 | 投入・取得が 503 `DATASTORE` | `details.kind`。`failed` = テーブル ID・キー名/型の不一致・スロットリング。`threw` = `connectDataStore` 無効や接続不可。詳細は実行環境のログ |
 | 500 `CONFIG_MISSING` | `FN_DS_TABLE_SENSOR_DATA` 未設定。`/v1/health` の `configMissing` |
 | MCP クライアントが接続できない | `accept` に `application/json` を含めているか。認証ヘッダ。GET で繋ごうとしていないか（405） |
@@ -114,7 +115,8 @@ Variables:
 | :--- | :--- |
 | `ENEBULAR_PROJECT_ID` / `ENEBULAR_CLOUD_ID` / `ENEBULAR_FILE_ASSET_ID` | §1 で得た ID。`ENEBULAR_FILE_ASSET_ID` は `npm run enebular:init` で作ったもの |
 | `ENEBULAR_HTTP_TRIGGER_URL` | トリガー URL。スモークテストと Environment の URL 表示に使う |
-| `ENEBULAR_HTTP_TRIGGER_PATH` / `ENEBULAR_TIMEOUT` | 任意（既定 `sensor-mcp-server` / `30`）。`apply_config` のときに送られる |
+| `ENEBULAR_HTTP_TRIGGER_PATH` | 通常は不要。**未設定なら `ENEBULAR_HTTP_TRIGGER_URL` の末尾パスから導く**。両方設定して食い違うと止まる |
+| `ENEBULAR_TIMEOUT` | 任意（既定 `30`）。`apply_config` のときに送られる |
 | `FN_MOCK_MODE` | `false` |
 | `FN_LOG_LEVEL` | `INFO` |
 | `FN_DS_TABLE_SENSOR_DATA` | センサーデータのテーブル ID |
@@ -132,6 +134,9 @@ Actions タブ → **Deploy to enebular** → Run workflow で次を選ぶ。
 | :--- | :--- |
 | `environment` | `staging` / `production` |
 | `apply_config` | オンにすると `deploy.mjs config` も実行し、HTTP トリガー・タイムアウト・`connectDataStore`・環境変数（`FN_*`）を反映する。**`FN_*` を変えたときだけオンにする**。envVars は送った内容で置き換わるので、Environment に無い `FN_*` は実行環境から消える |
+
+> `apply_config` は HTTP トリガーのパスも送る。パスは `ENEBULAR_HTTP_TRIGGER_URL` から導くので、URL を正しく登録しておけばコンソールの設定と食い違わない。
+> URL 未設定で `apply_config` をオンにすると既定の `sensor-mcp-server` が設定され、コンソールで決めたパスを上書きする。
 | `skip_smoke` | スモークテストを省略する（トリガー URL が未設定のときなど） |
 
 デプロイ ID は `gh<実行番号>-<コミット 7 桁>` になり、`/v1/health` の `commit` とバージョン記録の名前に出る。

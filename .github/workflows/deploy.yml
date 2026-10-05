@@ -3,7 +3,8 @@
 # デプロイ先は GitHub Environment（staging / production）で切り替える。Environment ごとに:
 #   Secrets  : ENEBULAR_ACCESS_KEY / ENEBULAR_SECRET_KEY / FN_API_KEY / FN_BASIC_AUTH_USER / FN_BASIC_AUTH_PASSWORD
 #   Variables: ENEBULAR_PROJECT_ID / ENEBULAR_CLOUD_ID / ENEBULAR_FILE_ASSET_ID / ENEBULAR_HTTP_TRIGGER_URL
-#              ENEBULAR_HTTP_TRIGGER_PATH / ENEBULAR_TIMEOUT / FN_MOCK_MODE / FN_LOG_LEVEL
+#              ENEBULAR_TIMEOUT / FN_MOCK_MODE / FN_LOG_LEVEL（HTTP トリガーのパスは TRIGGER_URL の末尾から導く。
+#              ENEBULAR_HTTP_TRIGGER_PATH は通常不要）
 #              FN_DS_TABLE_SENSOR_DATA / FN_DS_TABLE_SENSORS / FN_SENSOR_QUERY_LIMIT / FN_SENSOR_QUERY_MAX_LIMIT / FN_MCP_SUMMARY_MAX_PAGES
 # 設定方法は docs/deploy.md「GitHub Actions でデプロイする」。
 #
@@ -20,7 +21,7 @@ on:
         default: staging
         options: [staging, production]
       apply_config:
-        description: 実行環境の設定（HTTP トリガー / タイムアウト / connectDataStore / 環境変数 FN_*）も反映する
+        description: 実行環境の設定（HTTP トリガー / タイムアウト / connectDataStore / 環境変数 FN_*）も反映する。トリガーのパスは ENEBULAR_HTTP_TRIGGER_URL から導く
         type: boolean
         default: false
       skip_smoke:

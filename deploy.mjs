@@ -72,6 +72,28 @@ const env = (/** @type {string} */ key) => {
   return v === undefined || v.trim() === '' ? undefined : v.trim()
 }
 
+/**
+ * HTTP トリガーのパス。ENEBULAR_HTTP_TRIGGER_PATH が無ければ ENEBULAR_HTTP_TRIGGER_URL の末尾セグメントから導く。
+ * 両方あって食い違っていたら止める。既定値で config を送ると、コンソールで設定したパスを黙って上書きし、
+ * スモークテストが 404 になる（実際に起きた）。
+ */
+function resolveTriggerPath() {
+  const explicit = env('ENEBULAR_HTTP_TRIGGER_PATH')?.replace(/^\/+|\/+$/g, '')
+  const url = env('ENEBULAR_HTTP_TRIGGER_URL')
+  let fromUrl
+  if (url) {
+    try {
+      fromUrl = new URL(url).pathname.replace(/^\/+|\/+$/g, '') || undefined
+    } catch {
+      fail(`ENEBULAR_HTTP_TRIGGER_URL が URL として読めません: ${url}`)
+    }
+  }
+  if (explicit && fromUrl && explicit !== fromUrl) {
+    fail(`ENEBULAR_HTTP_TRIGGER_PATH（${explicit}）と ENEBULAR_HTTP_TRIGGER_URL のパス（${fromUrl}）が一致しません`)
+  }
+  return explicit ?? fromUrl ?? pkg.name
+}
+
 const cfg = {
   accessKey: env('ENEBULAR_ACCESS_KEY'),
   secretKey: env('ENEBULAR_SECRET_KEY'),
@@ -79,7 +101,7 @@ const cfg = {
   cloudId: env('ENEBULAR_CLOUD_ID'),
   assetId: env('ENEBULAR_FILE_ASSET_ID'),
   assetName: env('ENEBULAR_FILE_ASSET_NAME') ?? `${pkg.name}-function`,
-  triggerPath: env('ENEBULAR_HTTP_TRIGGER_PATH') ?? pkg.name,
+  triggerPath: resolveTriggerPath(),
   triggerUrl: env('ENEBULAR_HTTP_TRIGGER_URL'),
   timeout: Number(env('ENEBULAR_TIMEOUT') ?? 30),
   cloudName: env('ENEBULAR_CLOUD_NAME'),
@@ -470,7 +492,13 @@ async function smoke(expectedCommit) {
     await new Promise((r) => setTimeout(r, 5000))
   }
   console.log('')
-  if (!health) fail(`health が取得できませんでした: ${lastNote}`)
+  if (!health) {
+    const hint = /HTTP 404/.test(lastNote)
+      ? `
+  404 が続く場合: 実行環境の HTTP トリガーのパスが URL（${base}）と一致しているか確認してください（コンソール、または ENEBULAR_HTTP_TRIGGER_PATH を合わせて enebular:config）`
+      : ''
+    fail(`health が取得できませんでした: ${lastNote}${hint}`)
+  }
   console.log(`  ${JSON.stringify(health)}`)
   const problems = []
   // これが効く。ZIP の差し替え漏れはここでしか気づけない
