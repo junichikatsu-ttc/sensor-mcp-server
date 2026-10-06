@@ -4,18 +4,26 @@ import { runOp } from './run'
 export type SortOrder = 'asc' | 'desc'
 
 /**
- * SDK の `order` は README（true=昇順）と JSDoc（true=降順）で意味が食い違う。実測では **true = 降順**。
+ * SDK の `order` は README（true=昇順）と JSDoc（false=昇順）で意味が食い違う。
+ * 本番で実測した結果（@uhuru/enebular-sdk 1.0.1）は **true = 昇順 / false = 降順**。
+ * SDK の ProxyClient が `Order: !order` に反転してプロキシへ渡し、プロキシは `ScanIndexForward: !Order` にする。
  * ここ 1 箇所で写像し、呼び出し側は 'asc' | 'desc' だけを使う。
  */
 export function toSdkOrder(order: SortOrder): boolean {
-  return order === 'desc'
+  return order === 'asc'
 }
+
+/**
+ * query の values。キーは**テーブルのメインキー名かサブキー名**でなければならない（pitfalls 13）。
+ * 配列は IN / BETWEEN 用に `:名前1`, `:名前2`, … へ展開される。
+ */
+export type QueryValues = Record<string, string | number | (string | number)[]>
 
 export interface PageOptions {
   tableId: string
-  /** 例: '#no = :no AND #ts BETWEEN :startTime AND :endTime' */
+  /** 例: '#no = :no AND #ts BETWEEN :ts1 AND :ts2'（values.ts = [start, end]） */
   expression: string
-  values: Record<string, string | number>
+  values: QueryValues
   order: SortOrder
   /** 1 ページの件数。SDK の既定は 10 件なので必ず明示する */
   limit: number

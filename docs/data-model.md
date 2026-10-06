@@ -8,7 +8,7 @@ enebular データストアは「メインキー + サブキー」の JSON ア�
 | 誰が | 何を | どの順で | 使うテーブル / 操作 |
 | :--- | :--- | :--- | :--- |
 | デバイス | 1 件を保存 | — | `sensorData` put |
-| REST / MCP | あるセンサーの期間内のデータ | 時刻順（昇順 / 降順） | `sensorData` query（`no` = , `ts` BETWEEN） |
+| REST / MCP | あるセンサーの期間内のデータ | 時刻順（昇順 / 降順） | `sensorData` query（`#no = :no AND #ts BETWEEN :ts1 AND :ts2`、`values: { no, ts: [start, end] }`。値名はキー属性名に限る） |
 | MCP | あるセンサーの最新 1 件 | 降順 1 件 | `sensorData` query（desc, limit 1） |
 | MCP | どのセンサーがあるか + 最新値 | `no` 順 | `sensors` query（`scope` = 'all'） |
 

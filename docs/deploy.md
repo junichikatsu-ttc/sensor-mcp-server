@@ -84,6 +84,8 @@ curl -s -X POST https://xxxx.enebular.com/sensor-mcp-server/mcp \
 | スモークテストが 404 のまま終わる（HTML の「ページが見つかりませんでした」） | enebular 側の 404。実行環境の HTTP トリガーのパスが `ENEBULAR_HTTP_TRIGGER_URL` のパスと一致していない。`enebular:config`（`apply_config`）が別のパスを送っていないか |
 | 関数は動いているのに全部 404（JSON の `error.path` が返る） | こちらの 404。`app.ts` の 3 通りマウントが崩れていないか |
 | 投入・取得が 503 `DATASTORE` | `details.kind`。`failed` = テーブル ID・キー名/型の不一致・スロットリング。`threw` = `connectDataStore` 無効や接続不可。詳細は実行環境のログ |
+| 範囲指定（`startTime` / `endTime`）付きの取得だけ 503 `DATASTORE`。ログに `Invalid KeyConditionExpression ... attribute name: #ts` | `query` の `values` にキー属性名（`no` / `ts`）以外の名前を使っている。プロキシはそれ以外を捨てる（スキル pitfalls 13）。`buildSensorExpression` の形を変えない |
+| `order=asc` で新しい順が返る / 最新 1 件が最古になる | `toSdkOrder` の向き。SDK 1.0.1 は `true` = 昇順（スキル pitfalls 14） |
 | 500 `CONFIG_MISSING` | `FN_DS_TABLE_SENSOR_DATA` 未設定。`/v1/health` の `configMissing` |
 | MCP クライアントが接続できない | `accept` に `application/json` を含めているか。認証ヘッダ。GET で繋ごうとしていないか（405） |
 

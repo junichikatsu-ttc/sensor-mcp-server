@@ -4,11 +4,12 @@ import { runOp } from './run'
 export type SortOrder = 'asc' | 'desc'
 
 /**
- * SDK の `order` は README（true=昇順）と JSDoc（true=降順）で意味が食い違う。実測では **true = 降順**。
+ * SDK の `order` は README（true=昇順）と JSDoc（false=昇順）で意味が食い違う。
+ * 本番で実測（@uhuru/enebular-sdk 1.0.1）すると **true = 昇順 / false = 降順**（pitfalls 14）。
  * ここ 1 箇所で写像し、呼び出し側は 'asc' | 'desc' だけを使う。
  */
 export function toSdkOrder(order: SortOrder): boolean {
-  return order === 'desc'
+  return order === 'asc'
 }
 
 export interface QueryOptions {

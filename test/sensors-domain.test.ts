@@ -9,16 +9,30 @@ import { parseTimeInput, summarizeReadings, toQuery, toReading } from '../src/se
 const no = sensorNoSchema.parse('dev-1')
 
 describe('buildSensorExpression（元フローの ds-easy-query-item 相当）', () => {
-  it('両方指定で BETWEEN', () => {
+  // ★ プロキシは values のキーがキー属性名（no / ts）のものしか `#名前` / `:名前` に変換しない（pitfalls 13）。
+  //   :startTime のような任意名を使うと本番で ValidationException になる。この形は変えない。
+  it('両方指定で BETWEEN。値は ts の配列で渡し :ts1 / :ts2 に展開させる', () => {
     expect(buildSensorExpression({ no, startTime: 1, endTime: 2 })).toEqual({
-      expression: '#no = :no AND #ts BETWEEN :startTime AND :endTime',
-      values: { no: 'dev-1', startTime: 1, endTime: 2 },
+      expression: '#no = :no AND #ts BETWEEN :ts1 AND :ts2',
+      values: { no: 'dev-1', ts: [1, 2] },
     })
   })
-  it('片方だけなら >= / <=、無指定なら no のみ', () => {
-    expect(buildSensorExpression({ no, startTime: 1 }).expression).toBe('#no = :no AND #ts >= :startTime')
-    expect(buildSensorExpression({ no, endTime: 2 }).expression).toBe('#no = :no AND #ts <= :endTime')
-    expect(buildSensorExpression({ no }).expression).toBe('#no = :no')
+  it('片方だけなら >= / <= で値名は ts、無指定なら no のみ', () => {
+    expect(buildSensorExpression({ no, startTime: 1 })).toEqual({
+      expression: '#no = :no AND #ts >= :ts',
+      values: { no: 'dev-1', ts: 1 },
+    })
+    expect(buildSensorExpression({ no, endTime: 2 })).toEqual({
+      expression: '#no = :no AND #ts <= :ts',
+      values: { no: 'dev-1', ts: 2 },
+    })
+    expect(buildSensorExpression({ no })).toEqual({ expression: '#no = :no', values: { no: 'dev-1' } })
+  })
+  it('values に no / ts 以外のキーは使わない（プロキシが捨てるため）', () => {
+    for (const q of [{ no }, { no, startTime: 1 }, { no, endTime: 2 }, { no, startTime: 1, endTime: 2 }]) {
+      expect(Object.keys(buildSensorExpression(q)).length).toBe(2)
+      expect(Object.keys(buildSensorExpression(q).values).every((k) => k === 'no' || k === 'ts')).toBe(true)
+    }
   })
 })
 

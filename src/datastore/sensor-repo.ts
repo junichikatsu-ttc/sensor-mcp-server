@@ -1,6 +1,7 @@
 import type { SensorNo, SensorQuery, SensorQueryResult, SensorReading } from '../schemas'
 import { getDataStoreClient } from './client'
 import { queryPage } from './query'
+import type { QueryValues } from './query'
 import { upsertSensorMeta } from './registry-repo'
 import { runOp } from './run'
 import { resolveTableId } from './tables'
@@ -18,27 +19,32 @@ const TABLE = 'sensorData' as const
 
 /**
  * クエリ式の組み立て。純関数なのでデータストアなしでテストできる。
+ *
+ * ★ データストアのプロキシは `values` のキーが**テーブルのメインキー名 / サブキー名と一致するものだけ**
+ *   `#名前` / `:名前` に変換し、それ以外のキーは名前も値も黙って捨てる（pitfalls 13）。
+ *   そのため範囲条件の値も `ts` という名前で渡す。BETWEEN は配列で渡すと `:ts1` / `:ts2` に展開される
+ *   （公式ノード ds-easy-query-item と同じ形）。`:startTime` のような任意名は使えない。
+ *
  *   - no のみ                 → '#no = :no'
- *   - startTime のみ          → '#no = :no AND #ts >= :startTime'
- *   - endTime のみ            → '#no = :no AND #ts <= :endTime'
- *   - 両方（元フローと同じ）   → '#no = :no AND #ts BETWEEN :startTime AND :endTime'
+ *   - startTime のみ          → '#no = :no AND #ts >= :ts'                 values.ts = startTime
+ *   - endTime のみ            → '#no = :no AND #ts <= :ts'                 values.ts = endTime
+ *   - 両方（元フローと同じ）   → '#no = :no AND #ts BETWEEN :ts1 AND :ts2'  values.ts = [startTime, endTime]
  */
 export function buildSensorExpression(q: Pick<SensorQuery, 'no' | 'startTime' | 'endTime'>): {
   expression: string
-  values: Record<string, string | number>
+  values: QueryValues
 } {
-  const values: Record<string, string | number> = { no: q.no }
+  const values: QueryValues = { no: q.no }
   const parts = ['#no = :no']
   if (q.startTime !== undefined && q.endTime !== undefined) {
-    parts.push('#ts BETWEEN :startTime AND :endTime')
-    values['startTime'] = q.startTime
-    values['endTime'] = q.endTime
+    parts.push('#ts BETWEEN :ts1 AND :ts2')
+    values['ts'] = [q.startTime, q.endTime]
   } else if (q.startTime !== undefined) {
-    parts.push('#ts >= :startTime')
-    values['startTime'] = q.startTime
+    parts.push('#ts >= :ts')
+    values['ts'] = q.startTime
   } else if (q.endTime !== undefined) {
-    parts.push('#ts <= :endTime')
-    values['endTime'] = q.endTime
+    parts.push('#ts <= :ts')
+    values['ts'] = q.endTime
   }
   return { expression: parts.join(' AND '), values }
 }

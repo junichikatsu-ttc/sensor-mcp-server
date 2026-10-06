@@ -79,9 +79,14 @@ export function toUserId(raw: string): UserId { /* 検証してから */ return 
 
 データストアに集計機能が無いため。
 
-### `query` の `order` は `true` が降順
+### `query` の `order` は `true` が昇順（SDK 1.0.1 の実測）
 
-SDK 定義は false=ascending / true=descending。ULID をサブキーにすれば `true` が「新しい順」になる。
+JSDoc は false=ascending、README は true=昇順で食い違う。**本番で実測すると `true` = 昇順 / `false` = 降順**
+（pitfalls 14）。写像は `query.ts` の `toSdkOrder` 1 箇所に閉じ込め、デプロイ後に `order=asc` / `desc` の向きを確認する。
+
+### `query` の `values` のキーはメインキー名 / サブキー名に限る
+
+それ以外のキーはプロキシが黙って捨てる。範囲条件もサブキー名で渡し、BETWEEN は配列（pitfalls 13）。
 
 ### テーブル ID はコードに書かない
 

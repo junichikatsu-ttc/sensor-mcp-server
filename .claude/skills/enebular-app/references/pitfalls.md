@@ -194,3 +194,37 @@ React のような自動エスケープが無い。ユーザー入力や外部�
 
 > 初期データの投入は「1回やれば終わり」の作業に見えるが、**取り込む範囲を変えるたびに
 > やり直す。** 上限のある資源を消費するので、最初から少しずつ入れる形にしておく。
+
+## 13. `query` の `values` はメインキー名 / サブキー名しか効かない
+
+**`values` のキーがテーブルのメインキー名かサブキー名と一致するものだけが `#名前` / `:名前` に変換される。
+それ以外のキーは名前も値も黙って捨てられる。** `#ts BETWEEN :startTime AND :endTime` のような
+任意の値名を使うと、`#ts` が未定義のまま DynamoDB に渡り、
+`ValidationException: Invalid KeyConditionExpression: An expression attribute name used in the document path
+is not defined; attribute name: #ts` で失敗する（503 `DATASTORE` / `kind: failed`。本番で実際に起きた）。
+
+メインキーだけの式（`#no = :no`）は通るので、**範囲条件を付けた瞬間に初めて壊れる。** テストのインメモリ実装が
+任意名を受け付けていると、本番まで気づけない。
+
+**書き方（公式ノード ds-easy-query-item と同じ）:**
+
+| 条件 | expression | values |
+| :--- | :--- | :--- |
+| 等価 / 比較 | `#no = :no AND #ts >= :ts` | `{ no, ts: 境界値 }` |
+| BETWEEN | `#no = :no AND #ts BETWEEN :ts1 AND :ts2` | `{ no, ts: [start, end] }`（配列が `:ts1`, `:ts2` に展開される） |
+| IN | `#ts IN (:ts1, :ts2)` | `{ no, ts: [a, b] }` |
+
+- サブキーの値はテーブル定義が数値型なら `Number()` に変換される
+- インメモリ実装も同じ規則にして、任意名を throw させる（雛形の `memory.ts`）
+
+出典: `enebular-aws-sam-templates` の `features/datastore/ds-common/index.ts`（`convertUserConditionToSysCondition`）、
+`enebular-official-nodes` の `enebular-privatenode-contrib-ee-connect/v2/src/common/ProxyClient.ts`（`easyQueryRequest`）。
+
+## 14. `query` の `order` は SDK 1.0.1 で `true` = 昇順
+
+constraints.md の古い記述（`true` = 降順）は誤り。**`@uhuru/enebular-sdk` 1.0.1 では `true` = 昇順 / `false` = 降順**。
+SDK の `ProxyClient` が `Order: !order` に反転してプロキシへ渡し、プロキシが `ScanIndexForward: !Order` にするため。
+JSDoc（false = ascending）と README（true = 昇順）が食い違っていて、JSDoc の方が間違っている。
+
+症状は「`order=asc` で新しい順が返る」「最新 1 件を取ったつもりが最古の 1 件」。
+**写像は 1 箇所（`query.ts` の `toSdkOrder`）に閉じ込め、本番の `/v1/sensors?order=asc` と `desc` で向きを実測して固定する。**

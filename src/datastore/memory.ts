@@ -18,9 +18,12 @@ import type { TableName } from './tables'
  * 実物との違いを小さくするため、SDK の振る舞いをなるべく模倣する:
  *   - getItem で無ければ **文字列** 'Not found' を throw（runGet が undefined に落とす）
  *   - 未知のテーブル ID は文字列 'Table not found' を throw
- *   - query の expression は `#a = :a [AND #b (=|<|<=|>|>=) :b | AND #b BETWEEN :x AND :y]` のみ対応
+ *   - query の expression は `#a = :a [AND #b (=|<|<=|>|>=) :b | AND #b BETWEEN :b1 AND :b2]` のみ対応
+ *   - **values のキーはメインキー名 / サブキー名だけが有効**。それ以外のキーはプロキシと同じく無視し、
+ *     式に未定義の `#名前` / `:名前` が残れば DynamoDB 相当の ValidationException（文字列）を throw する（pitfalls 13）
+ *   - 配列の値は `:名前1`, `:名前2`, … に展開する（BETWEEN / IN）
  *   - limit / startKey / LastEvaluatedKey によるページング
- *   - order: true = 降順（query.ts の toSdkOrder と同じ解釈）
+ *   - order: true = 昇順 / false = 降順（query.ts の toSdkOrder と同じ解釈。SDK 1.0.1 の実測）
  * 永続化はしない。プロセスが終わると消える。
  */
 
@@ -42,14 +45,48 @@ interface Cond {
 const COND_RE = /^#(\w+)\s*(=|<=|>=|<|>)\s*:(\w+)$/
 const BETWEEN_RE = /#(\w+)\s+BETWEEN\s+:(\w+)\s+AND\s+:(\w+)/gi
 
-function parseExpression(expression: string, values: Record<string, KeyValue>): Cond[] {
+/**
+ * プロキシ（ds-common の convertUserConditionToSysCondition）と同じ規則で名前と値を定義する。
+ * values のキーがメインキー名かサブキー名のときだけ `#key` を定義し、値は `:key`（配列なら `:key1`, `:key2`, …）。
+ * それ以外のキーは捨てる。
+ */
+function defineNames(
+  spec: TableSpec,
+  values: Record<string, unknown>,
+): { names: Set<string>; vals: Map<string, KeyValue> } {
+  const names = new Set<string>()
+  const vals = new Map<string, KeyValue>()
+  for (const [key, value] of Object.entries(values)) {
+    if (key !== spec.mainKey && key !== spec.subKey) continue
+    names.add(key)
+    if (Array.isArray(value)) {
+      value.forEach((v, i) => vals.set(`${key}${i + 1}`, v as KeyValue))
+    } else {
+      vals.set(key, value as KeyValue)
+    }
+  }
+  return { names, vals }
+}
+
+function parseExpression(spec: TableSpec, expression: string, values: Record<string, unknown>): Cond[] {
+  const { names, vals } = defineNames(spec, values)
+  const field = (name: string): string => {
+    if (!names.has(name)) {
+      throw `ValidationException: Invalid KeyConditionExpression: An expression attribute name used in the document path is not defined; attribute name: #${name}`
+    }
+    return name
+  }
+  const value = (name: string): KeyValue => {
+    const v = vals.get(name)
+    if (v === undefined) {
+      throw `ValidationException: Invalid KeyConditionExpression: An expression attribute value used in expression is not defined; attribute value: :${name}`
+    }
+    return v
+  }
   const conds: Cond[] = []
   // BETWEEN は内部に AND を含むので、先に取り出してから残りを AND で分割する
-  const rest = expression.replace(BETWEEN_RE, (_m, field: string, a: string, b: string) => {
-    const va = values[a]
-    const vb = values[b]
-    if (va === undefined || vb === undefined) throw `Missing value: ${va === undefined ? a : b}`
-    conds.push({ field, op: 'between', a: va, b: vb })
+  const rest = expression.replace(BETWEEN_RE, (_m, f: string, a: string, b: string) => {
+    conds.push({ field: field(f), op: 'between', a: value(a), b: value(b) })
     return ''
   })
   for (const part of rest.split(/\s+AND\s+/i)) {
@@ -57,9 +94,7 @@ function parseExpression(expression: string, values: Record<string, KeyValue>): 
     if (!p) continue
     const m = COND_RE.exec(p)
     if (!m) throw `Unsupported expression: ${p}`
-    const value = values[m[3]!]
-    if (value === undefined) throw `Missing value: ${m[3]}`
-    conds.push({ field: m[1]!, op: m[2] as Cond['op'], a: value })
+    conds.push({ field: field(m[1]!), op: m[2] as Cond['op'], a: value(m[3]!) })
   }
   return conds
 }
@@ -146,8 +181,9 @@ export class MemoryDataStoreClient implements DataStoreClient {
   async query(params: DsQueryParams): Promise<DsQueryItemResult> {
     this.calls.query++
     const { spec, rows } = this.table(params.tableId)
-    const conds = parseExpression(params.expression, params.values as Record<string, KeyValue>)
-    const desc = params.order === true || params.order === 'true'
+    const conds = parseExpression(spec, params.expression, params.values as Record<string, unknown>)
+    // SDK 1.0.1: true = 昇順 / false = 降順。省略時はプロキシ既定の昇順
+    const desc = params.order === false || params.order === 'false'
     const list = [...rows.values()].filter((it) => conds.every((c) => matches(it, c)))
     list.sort((a, b) => compareKey(a[spec.subKey] as KeyValue, b[spec.subKey] as KeyValue) * (desc ? -1 : 1))
     const limit = Number(params.limit) || 10
