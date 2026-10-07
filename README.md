@@ -44,7 +44,11 @@ MCP エンドポイントは `https://lcdp005.enebular.com/ttc-iot-sensor-mcp/mc
 ### Claude Desktop
 
 Claude Desktop の設定ファイルは stdio のサーバーしか起動できないので、`mcp-remote` でリモート HTTP へ橋渡しする（Node.js が必要）。
-「設定 → 開発者 → 設定を編集」で `%APPDATA%\Claude\claude_desktop_config.json`（Windows）を開き、次を書く。
+「設定 → 開発者 → 設定を編集」で設定ファイルを開き、OS に合わせて次のどちらかを書く。**もう一方の OS の例をそのままコピーしても動かない。**
+
+#### Windows
+
+`%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -60,9 +64,33 @@ Claude Desktop の設定ファイルは stdio のサーバーしか起動でき�
 }
 ```
 
-- Windows では `npx` を直接 `command` にすると起動に失敗することがあるため `cmd /c` 経由にしている。macOS は `"command": "npx", "args": ["-y", "mcp-remote", "https://lcdp005.enebular.com/ttc-iot-sensor-mcp/mcp"]` でよい
-- 保存後、Claude Desktop を**タスクトレイからも完全に終了**して起動し直す。入力欄のツールアイコンに 4 ツールが並べば接続できている
-- うまくいかないときは `%APPDATA%\Claude\logs\mcp-server-sensor-data.log` を見る。`ページが見つかりませんでした` の HTML が出ていれば URL のトリガーパス（`ttc-iot-sensor-mcp`）が違う
+`npx` を直接 `command` にすると起動に失敗することがあるため `cmd /c` 経由にしている。
+
+#### macOS
+
+`~/Library/Application Support/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "sensor-data": {
+      "command": "npx",
+      "args": [
+        "-y", "mcp-remote",
+        "https://lcdp005.enebular.com/ttc-iot-sensor-mcp/mcp"
+      ]
+    }
+  }
+}
+```
+
+- `cmd` は macOS に存在しない。Windows 版の `"command": "cmd"` を貼ると `Failed to spawn process: No such file or directory` が出て即座に切断される
+- Claude Desktop は nvm などで入れた `npx` を PATH から拾えないことがある。その場合は `command` を `which npx` の出力（例: `/Users/<user>/.nvm/versions/node/v20.18.3/bin/npx`）に置き換える。nvm のバージョンを切り替えたらこのパスも直す
+
+#### 共通
+
+- 保存後、Claude Desktop を**完全に終了**して起動し直す（Windows はタスクトレイからも終了、macOS は Cmd+Q）。入力欄のツールアイコンに 4 ツールが並べば接続できている
+- うまくいかないときはログを見る。Windows は `%APPDATA%\Claude\logs\mcp-server-sensor-data.log`、macOS は `~/Library/Logs/Claude/mcp-server-sensor-data.log`。`ページが見つかりませんでした` の HTML が出ていれば URL のトリガーパス（`ttc-iot-sensor-mcp`）が違う
 - 「カスタムコネクタの追加」は組織で無効になっているため使わない。「開発者」メニュー自体が出ない場合はローカル MCP も無効化されているので、管理者に組織コネクタとして上の URL を登録してもらう
 - `API_KEY` を設定した場合は `"--header", "Authorization:${AUTH_HEADER}"` を `args` に足し、`"env": { "AUTH_HEADER": "Bearer <API_KEY>" }` を加える（値を直接書くと Windows で引数の空白が崩れる）
 
