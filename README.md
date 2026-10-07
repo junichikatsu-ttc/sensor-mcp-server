@@ -86,6 +86,7 @@ Claude Desktop の設定ファイルは stdio のサーバーしか起動でき�
 
 - `cmd` は macOS に存在しない。Windows 版の `"command": "cmd"` を貼ると `Failed to spawn process: No such file or directory` が出て即座に切断される
 - Claude Desktop は nvm などで入れた `npx` を PATH から拾えないことがある。その場合は `command` を `which npx` の出力（例: `/Users/<user>/.nvm/versions/node/v20.18.3/bin/npx`）に置き換える。nvm のバージョンを切り替えたらこのパスも直す
+- `npm error code EACCES` ... `Your cache folder contains root-owned files` が出る場合は、過去の `sudo npm install` で `~/.npm` に root 所有のファイルが残っている。`sudo chown -R $(id -u):$(id -g) ~/.npm` で直す。sudo を使えないときは `"env": { "npm_config_cache": "/Users/<user>/.npm-mcp" }` を足して別キャッシュに逃がす
 
 #### 共通
 
